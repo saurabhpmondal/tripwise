@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Trip": {
+      "title": "Trip",
+      "description": "Represents a travel trip planned by a user.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100, "description": "Name of the trip." },
+        "destination": { "type": "string", "maxLength": 100, "description": "Destination city or country." },
+        "startDate": { "type": "string", "format": "date", "description": "Start date of the trip." },
+        "endDate": { "type": "string", "format": "date", "description": "End date of the trip." },
+        "budget": { "type": "number", "description": "Total budget for the trip." },
+        "userId": { "type": "string", "description": "UID of the owner." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "destination", "startDate", "endDate", "budget", "userId", "createdAt", "updatedAt"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "An expense item within a trip.",
+      "type": "object",
+      "properties": {
+        "tripId": { "type": "string", "description": "ID of the parent trip." },
+        "amount": { "type": "number", "description": "Expense amount." },
+        "category": { "type": "string", "enum": ["Food", "Transport", "Accommodation", "Activities", "Shopping", "Other"], "description": "Category of the expense." },
+        "date": { "type": "string", "format": "date", "description": "Date of the expense." },
+        "description": { "type": "string", "maxLength": 200, "description": "Description of the expense." },
+        "userId": { "type": "string", "description": "UID of the owner." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tripId", "amount", "category", "date", "description", "userId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/trips/{tripId}": {
+      "schema": "Trip",
+      "description": "Collection of trips."
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Collection of all expenses."
+    }
+  }
+}

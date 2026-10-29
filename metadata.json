@@ -1,0 +1,6 @@
+{
+  "name": "TripWise: Expense Planner",
+  "description": "A comprehensive trip planner and expense tracker for modern travelers to manage budgets and spending.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
