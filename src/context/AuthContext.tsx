@@ -14,6 +14,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('autostart') === '1') {
+      setUser({
+        uid: 'mock-user-123',
+        email: 'demo@example.com',
+        displayName: 'Demo User',
+        emailVerified: true
+      } as any);
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);

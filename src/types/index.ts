@@ -5,6 +5,15 @@ export interface Trip {
   startDate: string;
   endDate: string;
   budget: number;
+  isDeleted: boolean;
+  status: 'active' | 'completed';
+  autoCompleteDisabled?: boolean;
+  totalSpent?: number;
+  totalTasks?: number;
+  completedTasks?: number;
+  coTravelers?: string[];
+  planningNotes?: string;
+  emergencyContacts?: string;
   userId: string;
   createdAt: any;
   updatedAt: any;
@@ -18,7 +27,38 @@ export interface Expense {
   amount: number;
   category: ExpenseCategory;
   date: string;
-  description: string;
+  description?: string;
+  photoUrl?: string;
+  paidBy?: string;
+  splitAmong?: string[];
+  userId: string;
+  isLoading?: boolean;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export type ChecklistType = 'Activity' | 'Place' | 'Food' | 'Other' | 'Packing';
+
+export interface ChecklistItem {
+  id: string;
+  tripId: string;
+  title: string;
+  type: ChecklistType;
+  isCompleted: boolean;
+  userId: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface ItineraryItem {
+  id: string;
+  tripId: string;
+  title: string;
+  date: string;
+  time?: string;
+  location?: string;
+  notes?: string;
+  isCompleted?: boolean;
   userId: string;
   createdAt: any;
   updatedAt: any;

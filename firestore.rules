@@ -11,6 +11,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
@@ -29,28 +33,66 @@ service cloud.firestore {
 
     // Entity Validations
     function isValidTrip(data) {
-      return data.keys().hasAll(['name', 'destination', 'startDate', 'endDate', 'budget', 'userId', 'createdAt', 'updatedAt']) &&
-             data.keys().hasOnly(['name', 'destination', 'startDate', 'endDate', 'budget', 'userId', 'createdAt', 'updatedAt']) &&
+      return data.keys().hasAll(['name', 'destination', 'startDate', 'endDate', 'budget', 'isDeleted', 'status', 'userId', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['name', 'destination', 'startDate', 'endDate', 'budget', 'isDeleted', 'status', 'coTravelers', 'autoCompleteDisabled', 'totalSpent', 'totalTasks', 'completedTasks', 'planningNotes', 'emergencyContacts', 'userId', 'createdAt', 'updatedAt']) &&
              data.name is string && data.name.size() <= 100 &&
              data.destination is string && data.destination.size() <= 100 &&
              data.budget is number && data.budget >= 0 &&
+             data.isDeleted is bool &&
+             data.status in ['active', 'completed'] &&
+             (!('coTravelers' in data) || (data.coTravelers is list && data.coTravelers.size() <= 20)) &&
+             (!('autoCompleteDisabled' in data) || data.autoCompleteDisabled is bool) &&
+             (!('totalSpent' in data) || data.totalSpent is number) &&
+             (!('totalTasks' in data) || data.totalTasks is number) &&
+             (!('completedTasks' in data) || data.completedTasks is number) &&
+             (!('planningNotes' in data) || (data.planningNotes is string && data.planningNotes.size() <= 5000)) &&
+             (!('emergencyContacts' in data) || (data.emergencyContacts is string && data.emergencyContacts.size() <= 1000)) &&
              data.userId == request.auth.uid;
     }
 
     function isValidExpense(data) {
-      return data.keys().hasAll(['tripId', 'amount', 'category', 'date', 'description', 'userId', 'createdAt', 'updatedAt']) &&
-             data.keys().hasOnly(['tripId', 'amount', 'category', 'date', 'description', 'userId', 'createdAt', 'updatedAt']) &&
+      return data.keys().hasAll(['tripId', 'amount', 'category', 'date', 'userId', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['tripId', 'amount', 'category', 'date', 'description', 'photoUrl', 'paidBy', 'splitAmong', 'isLoading', 'userId', 'createdAt', 'updatedAt']) &&
              data.amount is number && data.amount >= 0 &&
              data.category in ['Food', 'Transport', 'Accommodation', 'Activities', 'Shopping', 'Other'] &&
-             data.description is string && data.description.size() <= 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 2048)) &&
+             (!('paidBy' in data) || (data.paidBy is string && data.paidBy.size() <= 100)) &&
+             (!('splitAmong' in data) || (data.splitAmong is list && data.splitAmong.size() <= 20)) &&
+             (!('isLoading' in data) || data.isLoading is bool) &&
              data.userId == request.auth.uid;
+    }
+
+    function isValidChecklistItem(data) {
+      return data.keys().hasAll(['tripId', 'title', 'type', 'isCompleted', 'userId', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['tripId', 'title', 'type', 'isCompleted', 'userId', 'createdAt', 'updatedAt']) &&
+             data.title is string && data.title.size() <= 150 &&
+             data.type in ['Activity', 'Place', 'Food', 'Other', 'Packing'] &&
+             data.isCompleted is bool &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidItineraryItem(data) {
+      return data.keys().hasAll(['tripId', 'title', 'date', 'userId', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['tripId', 'title', 'date', 'time', 'location', 'notes', 'isCompleted', 'userId', 'createdAt', 'updatedAt']) &&
+             data.title is string && data.title.size() <= 100 &&
+             data.date is string &&
+             (!('time' in data) || (data.time is string && data.time.size() <= 20)) &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 200)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+             (!('isCompleted' in data) || data.isCompleted is bool) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isTripOwner(tripId) {
+      return isVerified() && get(/databases/$(database)/documents/trips/$(tripId)).data.userId == request.auth.uid;
     }
 
     // Trips Collection
     match /trips/{tripId} {
       allow get: if isOwner(existing().userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if isSignedIn() && 
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && 
                       isValidTrip(incoming()) && 
                       incoming().createdAt == request.time &&
                       incoming().updatedAt == request.time;
@@ -65,12 +107,12 @@ service cloud.firestore {
     // Expenses Collection
     match /expenses/{expenseId} {
       allow get: if isOwner(existing().userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if isSignedIn() && 
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && 
                       isValidExpense(incoming()) && 
                       incoming().createdAt == request.time &&
                       incoming().updatedAt == request.time &&
-                      exists(/databases/$(database)/documents/trips/$(incoming().tripId));
+                      isTripOwner(incoming().tripId);
       allow update: if isOwner(existing().userId) && 
                       isValidExpense(incoming()) && 
                       incoming().userId == existing().userId &&
@@ -78,5 +120,40 @@ service cloud.firestore {
                       incoming().updatedAt == request.time;
       allow delete: if isOwner(existing().userId);
     }
+
+    // Checklist Items Collection
+    match /checklistItems/{itemId} {
+      allow get: if isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && 
+                      isValidChecklistItem(incoming()) && 
+                      incoming().createdAt == request.time &&
+                      incoming().updatedAt == request.time &&
+                      isTripOwner(incoming().tripId);
+      allow update: if isOwner(existing().userId) && 
+                      isValidChecklistItem(incoming()) && 
+                      incoming().userId == existing().userId &&
+                      incoming().createdAt == existing().createdAt &&
+                      incoming().updatedAt == request.time;
+      allow delete: if isOwner(existing().userId);
+    }
+
+    // Itinerary Items Collection
+    match /itineraryItems/{itemId} {
+      allow get: if isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() && 
+                      isValidItineraryItem(incoming()) && 
+                      incoming().createdAt == request.time &&
+                      incoming().updatedAt == request.time &&
+                      isTripOwner(incoming().tripId);
+      allow update: if isOwner(existing().userId) && 
+                      isValidItineraryItem(incoming()) && 
+                      incoming().userId == existing().userId &&
+                      incoming().createdAt == existing().createdAt &&
+                      incoming().updatedAt == request.time;
+      allow delete: if isOwner(existing().userId);
+    }
   }
 }
+

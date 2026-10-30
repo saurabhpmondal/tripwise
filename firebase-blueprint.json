@@ -10,11 +10,20 @@
         "startDate": { "type": "string", "format": "date", "description": "Start date of the trip." },
         "endDate": { "type": "string", "format": "date", "description": "End date of the trip." },
         "budget": { "type": "number", "description": "Total budget for the trip." },
+        "isDeleted": { "type": "boolean", "description": "Soft delete flag." },
+        "status": { "type": "string", "enum": ["active", "completed"], "description": "Current status of the trip." },
+        "autoCompleteDisabled": { "type": "boolean", "description": "Whether auto-completion is disabled." },
+        "totalSpent": { "type": "number", "description": "Cache of total amount spent." },
+        "totalTasks": { "type": "number", "description": "Cache of total checklist items." },
+        "completedTasks": { "type": "number", "description": "Cache of completed checklist items." },
+        "coTravelers": { "type": "array", "items": { "type": "string" }, "description": "List of friends/travelers names." },
+        "planningNotes": { "type": "string", "maxLength": 5000, "description": "General notes and resources for the trip." },
+        "emergencyContacts": { "type": "string", "maxLength": 1000, "description": "Emergency contact information." },
         "userId": { "type": "string", "description": "UID of the owner." },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "destination", "startDate", "endDate", "budget", "userId", "createdAt", "updatedAt"]
+      "required": ["name", "destination", "startDate", "endDate", "budget", "isDeleted", "status", "userId", "createdAt", "updatedAt"]
     },
     "Expense": {
       "title": "Expense",
@@ -26,11 +35,48 @@
         "category": { "type": "string", "enum": ["Food", "Transport", "Accommodation", "Activities", "Shopping", "Other"], "description": "Category of the expense." },
         "date": { "type": "string", "format": "date", "description": "Date of the expense." },
         "description": { "type": "string", "maxLength": 200, "description": "Description of the expense." },
+        "photoUrl": { "type": "string", "description": "URL of the uploaded bill photo." },
+        "paidBy": { "type": "string", "description": "Name of the person who paid." },
+        "splitAmong": { "type": "array", "items": { "type": "string" }, "description": "List of people sharing the cost." },
+        "isLoading": { "type": "boolean", "description": "Whether the photo is being uploaded." },
         "userId": { "type": "string", "description": "UID of the owner." },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["tripId", "amount", "category", "date", "description", "userId", "createdAt", "updatedAt"]
+      "required": ["tripId", "amount", "category", "date", "userId", "createdAt", "updatedAt"]
+    },
+    "ChecklistItem": {
+      "title": "ChecklistItem",
+      "description": "An item in a trip's checklist (activity, food, place, etc.)",
+      "type": "object",
+      "properties": {
+        "tripId": { "type": "string", "description": "ID of the parent trip." },
+        "title": { "type": "string", "maxLength": 150, "description": "What to do/eat/visit." },
+        "type": { "type": "string", "enum": ["Activity", "Place", "Food", "Other", "Packing"], "description": "Type of checklist item." },
+        "isCompleted": { "type": "boolean", "description": "Whether the item is finished." },
+        "userId": { "type": "string", "description": "UID of the owner." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tripId", "title", "type", "isCompleted", "userId", "createdAt", "updatedAt"]
+    },
+    "ItineraryItem": {
+      "title": "ItineraryItem",
+      "description": "A scheduled event in the trip itinerary.",
+      "type": "object",
+      "properties": {
+        "tripId": { "type": "string", "description": "ID of the parent trip." },
+        "title": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "description": "Time of the event (e.g. 10:00 AM)" },
+        "location": { "type": "string", "maxLength": 100 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "isCompleted": { "type": "boolean", "description": "Whether the itinerary item was visited/completed." },
+        "userId": { "type": "string", "description": "UID of the owner." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tripId", "title", "date", "userId", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -41,6 +87,14 @@
     "/expenses/{expenseId}": {
       "schema": "Expense",
       "description": "Collection of all expenses."
+    },
+    "/checklistItems/{itemId}": {
+      "schema": "ChecklistItem",
+      "description": "Collection of all checklist items."
+    },
+    "/itineraryItems/{itemId}": {
+      "schema": "ItineraryItem",
+      "description": "Collection of itinerary events."
     }
   }
 }
